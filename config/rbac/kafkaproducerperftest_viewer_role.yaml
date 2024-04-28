@@ -1,0 +1,23 @@
+# permissions for end users to view kafkaproducerperftests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: kafka-benchmark-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: kafkaproducerperftest-viewer-role
+rules:
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaproducerperftests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaproducerperftests/status
+  verbs:
+  - get

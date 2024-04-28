@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- kafka_v1alpha1_kafkaproducerperftest.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

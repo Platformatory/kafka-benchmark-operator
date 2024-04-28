@@ -1,0 +1,43 @@
+apiVersion: kafka.platformatory.io/v1alpha1
+kind: KafkaProducerPerfTest
+metadata:
+  labels:
+    app.kubernetes.io/name: kafka-benchmark-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: kafkaproducerperftest-sample
+  namespace: kafka-benchmark-operator-system
+spec:
+  count: 1
+  # image: platformatorylabs/kafka-performance-suite:1.0.0
+  bootstrapServers: kafka.confluent.svc.cluster.local:9092
+  producerConfig:
+    # security.protocol: "SASL_SSL"
+    # sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='perf' password='perf-password';"
+    # sasl.mechanism: "PLAIN"
+    batch.size: "100"
+    linger.ms: "100"
+    compression.type: lz4
+  # producerConfigSecretRef:
+  #   name: kafka-perf-producer-config
+  producerPerfParams:
+    recordsCount: 500
+    recordSizeBytes: 512000
+    throughput: -1
+    acks: -1
+  topic:
+    name: perf-test
+    autoCreate: true
+    replicas: 3
+    partitions: 6
+  metricsCollector:
+    provider: prometheus
+    jmxPrometheusURLs:
+    - kraftcontroller.confluent.svc.cluster.local:7778
+    - kafka.confluent.svc.cluster.local:7778
+    config:
+      remoteWrite:
+      - url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+  topologySpreadConstraints:
+    - topologyKey: zone
+      # maxSkew: 1
+      # whenUnsatisfiable: DoNotSchedule
