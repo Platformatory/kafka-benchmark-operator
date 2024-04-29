@@ -29,7 +29,7 @@ type ProducerConfigSecretRef struct {
 
 type ProducerPerfParams struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=500
+	// +kubebuilder:default:=5000
 	RecordsCount int32 `json:"recordsCount"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=512000

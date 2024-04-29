@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: kafkaproducerperftests.kafka.platformatory.io
+  name: kafkaconsumerperftests.kafka.platformatory.io
 spec:
   group: kafka.platformatory.io
   names:
-    kind: KafkaProducerPerfTest
-    listKind: KafkaProducerPerfTestList
-    plural: kafkaproducerperftests
-    singular: kafkaproducerperftest
+    kind: KafkaConsumerPerfTest
+    listKind: KafkaConsumerPerfTestList
+    plural: kafkaconsumerperftests
+    singular: kafkaconsumerperftest
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: KafkaProducerPerfTest is the Schema for the kafkaproducerperftests
+        description: KafkaConsumerPerfTest is the Schema for the kafkaconsumerperftests
           API
         properties:
           apiVersion:
@@ -38,10 +38,35 @@ spec:
           metadata:
             type: object
           spec:
-            description: KafkaProducerPerfTestSpec defines the desired state of KafkaProducerPerfTest
+            description: KafkaConsumerPerfTestSpec defines the desired state of KafkaConsumerPerfTest
             properties:
               bootstrapServers:
                 type: string
+              consumerConfig:
+                additionalProperties:
+                  type: string
+                type: object
+              consumerConfigSecretRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              consumerPerfParams:
+                properties:
+                  groupID:
+                    default: $POD_NAME
+                    type: string
+                  messagesCount:
+                    default: 10000
+                    format: int32
+                    type: integer
+                  timeout:
+                    default: 100000
+                    format: int32
+                    type: integer
+                type: object
               count:
                 format: int32
                 type: integer
@@ -93,36 +118,6 @@ spec:
                 - config
                 - provider
                 type: object
-              producerConfig:
-                additionalProperties:
-                  type: string
-                type: object
-              producerConfigSecretRef:
-                properties:
-                  name:
-                    type: string
-                required:
-                - name
-                type: object
-              producerPerfParams:
-                properties:
-                  acks:
-                    default: -1
-                    format: int32
-                    type: integer
-                  recordSizeBytes:
-                    default: 512000
-                    format: int32
-                    type: integer
-                  recordsCount:
-                    default: 5000
-                    format: int32
-                    type: integer
-                  throughput:
-                    default: -1
-                    format: int32
-                    type: integer
-                type: object
               topic:
                 properties:
                   autoCreate:
@@ -159,14 +154,14 @@ spec:
                 type: array
             required:
             - bootstrapServers
+            - consumerPerfParams
             - count
             - metricsCollector
-            - producerPerfParams
             - topic
             type: object
           status:
-            description: KafkaProducerPerfTestStatus defines the observed state of
-              KafkaProducerPerfTest
+            description: KafkaConsumerPerfTestStatus defines the observed state of
+              KafkaConsumerPerfTest
             type: object
         type: object
     served: true

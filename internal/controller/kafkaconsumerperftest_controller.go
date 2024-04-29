@@ -38,15 +38,15 @@ import (
 	"github.com/Platformatory/kafka-benchmark-operator/internal/utils"
 )
 
-// KafkaProducerPerfTestReconciler reconciles a KafkaProducerPerfTest object
-type KafkaProducerPerfTestReconciler struct {
+// KafkaConsumerPerfTestReconciler reconciles a KafkaConsumerPerfTest object
+type KafkaConsumerPerfTestReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaproducerperftests,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaproducerperftests/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaproducerperftests/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaconsumerperftests,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaconsumerperftests/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kafka.platformatory.io,resources=kafkaconsumerperftests/finalizers,verbs=update
 //+kubebuilder:rbac:groups=*,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=*,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=*,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -54,27 +54,30 @@ type KafkaProducerPerfTestReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the KafkaProducerPerfTest object against the actual cluster state, and then
+// the KafkaConsumerPerfTest object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
-func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	kafkaProducerPerfTestSync := &kafkav1alpha1.KafkaProducerPerfTest{}
-	if err := r.Get(ctx, req.NamespacedName, kafkaProducerPerfTestSync); err != nil {
+	kafkaConsumerPerfTestSync := &kafkav1alpha1.KafkaConsumerPerfTest{}
+	if err := r.Get(ctx, req.NamespacedName, kafkaConsumerPerfTestSync); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	secretName := ""
 
-	if kafkaProducerPerfTestSync.Spec.ProducerConfig != nil {
-		kafkaProducerPerfTestSync.Spec.ProducerConfig["bootstrap.servers"] = kafkaProducerPerfTestSync.Spec.BootstrapServers
+	if kafkaConsumerPerfTestSync.Spec.ConsumerConfig != nil || kafkaConsumerPerfTestSync.Spec.ConsumerConfigSecretRef.Name == "" {
+		if kafkaConsumerPerfTestSync.Spec.ConsumerConfig == nil {
+			kafkaConsumerPerfTestSync.Spec.ConsumerConfig = make(map[string]string, 1)
+		}
+		kafkaConsumerPerfTestSync.Spec.ConsumerConfig["bootstrap.servers"] = kafkaConsumerPerfTestSync.Spec.BootstrapServers
 		secretData := map[string][]byte{
-			"kafka.properties": []byte(utils.MapToJavaProperties(kafkaProducerPerfTestSync.Spec.ProducerConfig))}
-		secretName = fmt.Sprintf("%s-%s", kafkaProducerPerfTestSync.Name, "kafka-producer-config")
+			"kafka.properties": []byte(utils.MapToJavaProperties(kafkaConsumerPerfTestSync.Spec.ConsumerConfig))}
+		secretName = fmt.Sprintf("%s-%s", kafkaConsumerPerfTestSync.Name, "kafka-consumer-config")
 
 		// Create or update the Secret
 		secret := &corev1.Secret{
@@ -104,7 +107,7 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 			logger.Info("Secret updated successfully")
 		}
 	} else {
-		secretName = kafkaProducerPerfTestSync.Spec.ProducerConfigSecretRef.Name
+		secretName = kafkaConsumerPerfTestSync.Spec.ConsumerConfigSecretRef.Name
 	}
 
 	prometheusConfig := map[string]interface{}{
@@ -119,13 +122,13 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 					{
 						"targets": []string{"localhost:7071"},
 						"labels": map[string]string{
-							"env": kafkaProducerPerfTestSync.Name,
+							"env": kafkaConsumerPerfTestSync.Name,
 						},
 					},
 					{
-						"targets": kafkaProducerPerfTestSync.Spec.MetricsCollector.JMXPrometheusURLs,
+						"targets": kafkaConsumerPerfTestSync.Spec.MetricsCollector.JMXPrometheusURLs,
 						"labels": map[string]string{
-							"env": kafkaProducerPerfTestSync.Name,
+							"env": kafkaConsumerPerfTestSync.Name,
 						},
 					},
 				},
@@ -139,7 +142,7 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 				},
 			},
 		},
-		"remote_write": kafkaProducerPerfTestSync.Spec.MetricsCollector.Config.RemoteWrite,
+		"remote_write": kafkaConsumerPerfTestSync.Spec.MetricsCollector.Config.RemoteWrite,
 	}
 
 	prometheusYAMLBytes, err := yaml.Marshal(prometheusConfig)
@@ -150,7 +153,7 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	configMapData := string(prometheusYAMLBytes)
 
-	configMapName := fmt.Sprintf("%s-%s", kafkaProducerPerfTestSync.Name, "prometheus-config")
+	configMapName := fmt.Sprintf("%s-%s", kafkaConsumerPerfTestSync.Name, "prometheus-config")
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -184,8 +187,8 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	sleep_time := 60
 
-	if kafkaProducerPerfTestSync.Spec.MetricsCollector.Provider == "prometheus" {
-		for _, remote_url := range kafkaProducerPerfTestSync.Spec.MetricsCollector.Config.RemoteWrite {
+	if kafkaConsumerPerfTestSync.Spec.MetricsCollector.Provider == "prometheus" {
+		for _, remote_url := range kafkaConsumerPerfTestSync.Spec.MetricsCollector.Config.RemoteWrite {
 			if remote_url.Metadata_config != (kafkav1alpha1.RemoteWriteMetadataConfig{}) {
 				send_interval, _ := time.ParseDuration(remote_url.Metadata_config.Send_interval)
 				if int(send_interval.Seconds()) > sleep_time {
@@ -197,31 +200,30 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	sleep_time = sleep_time * 3
 
-	producer_job := &batchv1.Job{
+	consumer_job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kafkaProducerPerfTestSync.Name + "-producer-perf",
+			Name:      kafkaConsumerPerfTestSync.Name + "-consumer-perf",
 			Namespace: req.Namespace,
 		},
 		Spec: batchv1.JobSpec{
-			Completions: &kafkaProducerPerfTestSync.Spec.Count,
-			Parallelism: &kafkaProducerPerfTestSync.Spec.Count,
+			Completions: &kafkaConsumerPerfTestSync.Spec.Count,
+			Parallelism: &kafkaConsumerPerfTestSync.Spec.Count,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "producer",
-							Image: kafkaProducerPerfTestSync.Spec.Image,
+							Name:  "consumer",
+							Image: kafkaConsumerPerfTestSync.Spec.Image,
 							Command: []string{
 								"/bin/sh",
 								"-c",
 								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
-									"kafka-producer-perf-test --topic " + kafkaProducerPerfTestSync.Spec.Topic.Name +
-									" --num-records " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.RecordsCount)) +
-									" --record-size " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.RecordSizeBytes)) +
-									" --throughput " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.Throughput)) +
-									" --producer-props acks=" + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.Acks)) +
-									" client.id=$HOSTNAME " +
-									" --producer.config /mnt/kafka.properties && " +
+									"kafka-consumer-perf-test --topic " + kafkaConsumerPerfTestSync.Spec.Topic.Name +
+									" --bootstrap-server " + kafkaConsumerPerfTestSync.Spec.BootstrapServers +
+									" --messages " + strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.MessagesCount)) +
+									" --timeout " + strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.Timeout)) +
+									" group.id=" + kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.GroupID +
+									" --consumer.config /mnt/kafka.properties && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{
@@ -235,6 +237,14 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "status.podIP",
+										},
+									},
+								},
+								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
 										},
 									},
 								},
@@ -278,18 +288,18 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 		},
 	}
 
-	if kafkaProducerPerfTestSync.Spec.Topic.AutoCreate == true {
-		producer_job.Spec.Template.Spec.InitContainers = []corev1.Container{
+	if kafkaConsumerPerfTestSync.Spec.Topic.AutoCreate == true {
+		consumer_job.Spec.Template.Spec.InitContainers = []corev1.Container{
 			{
 				Name:  "topics",
-				Image: kafkaProducerPerfTestSync.Spec.Image,
+				Image: kafkaConsumerPerfTestSync.Spec.Image,
 				Command: []string{
 					"/bin/sh",
 					"-c",
-					"kafka-topics --if-not-exists --topic " + kafkaProducerPerfTestSync.Spec.Topic.Name + " --create --bootstrap-server " +
-						kafkaProducerPerfTestSync.Spec.BootstrapServers + " --replication-factor " +
-						strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.Topic.ReplicationFactor)) + " --partitions " +
-						strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.Topic.Partitions)) + " --command-config /mnt/kafka.properties",
+					"kafka-topics --if-not-exists --topic " + kafkaConsumerPerfTestSync.Spec.Topic.Name + " --create --bootstrap-server " +
+						kafkaConsumerPerfTestSync.Spec.BootstrapServers + " --replication-factor " +
+						strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.Topic.ReplicationFactor)) + " --partitions " +
+						strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.Topic.Partitions)) + " --command-config /mnt/kafka.properties",
 				},
 				VolumeMounts: []corev1.VolumeMount{
 					{
@@ -302,8 +312,8 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// TODO: Check if job exists and update job accordingly
-	if err := r.Create(ctx, producer_job); err != nil {
-		logger.Error(err, "Failed to reconcile Job for KafkaProducerPerf")
+	if err := r.Create(ctx, consumer_job); err != nil {
+		logger.Error(err, "Failed to reconcile Job for KafkaConsumerPerf")
 		return ctrl.Result{}, err
 	}
 
@@ -311,8 +321,8 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KafkaProducerPerfTestReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KafkaConsumerPerfTestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kafkav1alpha1.KafkaProducerPerfTest{}).
+		For(&kafkav1alpha1.KafkaConsumerPerfTest{}).
 		Complete(r)
 }

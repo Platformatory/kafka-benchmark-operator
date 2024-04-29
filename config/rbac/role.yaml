@@ -43,6 +43,32 @@ rules:
 - apiGroups:
   - kafka.platformatory.io
   resources:
+  - kafkaconsumerperftests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaconsumerperftests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaconsumerperftests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
   - kafkaproducerperftests
   verbs:
   - create
