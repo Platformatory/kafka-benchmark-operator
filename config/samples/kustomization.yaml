@@ -2,4 +2,5 @@
 resources:
 - kafka_v1alpha1_kafkaproducerperftest.yaml
 - kafka_v1alpha1_kafkaconsumerperftest.yaml
+- kafka_v1alpha1_kafkae2eperftest.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

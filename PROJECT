@@ -26,4 +26,13 @@ resources:
   kind: KafkaConsumerPerfTest
   path: github.com/Platformatory/kafka-benchmark-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: platformatory.io
+  group: kafka
+  kind: KafkaE2EPerfTest
+  path: github.com/Platformatory/kafka-benchmark-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: platformatorylabs/kafka-benchmark-operator
-  newTag: dev-0.0.21
+  newTag: dev-0.0.23
