@@ -8,7 +8,7 @@ metadata:
   namespace: kafka-benchmark-operator-system
 spec:
   count: 1
-  image: platformatorylabs/kafka-performance-suite:1.0.0
+  image: platformatorylabs/kafka-performance-suite:1.0.1
   bootstrapServers: kafka.confluent.svc.cluster.local:9092
   clientConfig:
     # security.protocol: "SASL_SSL"
@@ -17,7 +17,7 @@ spec:
   # clientConfigSecretRef:
   #   name: kafka-perf-e2e-config
   e2ePerfParams:
-    recordsCount: 5000000
+    recordsCount: 5000
     recordSizeBytes: 5120
     acks: "all"
   topic:

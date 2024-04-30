@@ -109,8 +109,8 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	prometheusConfig := map[string]interface{}{
 		"global": map[string]string{
-			"scrape_interval":     "15s",
-			"evaluation_interval": "15s",
+			"scrape_interval":     "5s",
+			"evaluation_interval": "5s",
 		},
 		"scrape_configs": []map[string]interface{}{
 			{
@@ -118,6 +118,12 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 				"static_configs": []map[string]interface{}{
 					{
 						"targets": []string{"localhost:7071"},
+						"labels": map[string]string{
+							"env": kafkaProducerPerfTestSync.Name,
+						},
+					},
+					{
+						"targets": []string{"localhost:9091"},
 						"labels": map[string]string{
 							"env": kafkaProducerPerfTestSync.Name,
 						},
@@ -215,13 +221,15 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 								"/bin/sh",
 								"-c",
 								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
+									"(./pushgateway --log.level=error &) && " +
 									"kafka-producer-perf-test --topic " + kafkaProducerPerfTestSync.Spec.Topic.Name +
 									" --num-records " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.RecordsCount)) +
 									" --record-size " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.RecordSizeBytes)) +
 									" --throughput " + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.Throughput)) +
 									" --producer-props acks=" + strconv.Itoa(int(kafkaProducerPerfTestSync.Spec.ProducerPerfParams.Acks)) +
 									" client.id=$HOSTNAME " +
-									" --producer.config /mnt/kafka.properties && " +
+									" --producer.config /mnt/kafka.properties | tee metrics.txt && " +
+									"./generate_prometheus_metrics.sh metrics.txt producer | curl --data-binary @- http://localhost:9091/metrics/job/kafka_producer_perf_test && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{

@@ -109,8 +109,8 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	prometheusConfig := map[string]interface{}{
 		"global": map[string]string{
-			"scrape_interval":     "15s",
-			"evaluation_interval": "15s",
+			"scrape_interval":     "5s",
+			"evaluation_interval": "5s",
 		},
 		"scrape_configs": []map[string]interface{}{
 			{
@@ -118,6 +118,12 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				"static_configs": []map[string]interface{}{
 					{
 						"targets": []string{"localhost:7071"},
+						"labels": map[string]string{
+							"env": kafkaE2EPerfTestSync.Name,
+						},
+					},
+					{
+						"targets": []string{"localhost:9091"},
 						"labels": map[string]string{
 							"env": kafkaE2EPerfTestSync.Name,
 						},
@@ -215,11 +221,13 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 								"/bin/sh",
 								"-c",
 								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
+									"(./pushgateway --log.level=error &) && " +
 									"kafka-run-class kafka.tools.EndToEndLatency " +
 									kafkaE2EPerfTestSync.Spec.BootstrapServers + " " + kafkaE2EPerfTestSync.Spec.Topic.Name + " " +
 									strconv.Itoa(int(kafkaE2EPerfTestSync.Spec.E2EPerfParams.RecordsCount)) + " " +
 									kafkaE2EPerfTestSync.Spec.E2EPerfParams.Acks + " " +
-									strconv.Itoa(int(kafkaE2EPerfTestSync.Spec.E2EPerfParams.RecordSizeBytes)) + " /mnt/kafka.properties && " +
+									strconv.Itoa(int(kafkaE2EPerfTestSync.Spec.E2EPerfParams.RecordSizeBytes)) + " /mnt/kafka.properties | tee metrics.txt && " +
+									"./generate_prometheus_metrics.sh metrics.txt e2e | curl --data-binary @- http://localhost:9091/metrics/job/kafka_e2e_latency_test && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{

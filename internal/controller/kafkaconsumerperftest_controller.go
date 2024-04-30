@@ -112,8 +112,8 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	prometheusConfig := map[string]interface{}{
 		"global": map[string]string{
-			"scrape_interval":     "15s",
-			"evaluation_interval": "15s",
+			"scrape_interval":     "5s",
+			"evaluation_interval": "5s",
 		},
 		"scrape_configs": []map[string]interface{}{
 			{
@@ -121,6 +121,12 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 				"static_configs": []map[string]interface{}{
 					{
 						"targets": []string{"localhost:7071"},
+						"labels": map[string]string{
+							"env": kafkaConsumerPerfTestSync.Name,
+						},
+					},
+					{
+						"targets": []string{"localhost:9091"},
 						"labels": map[string]string{
 							"env": kafkaConsumerPerfTestSync.Name,
 						},
@@ -218,12 +224,14 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 								"/bin/sh",
 								"-c",
 								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
+									"(./pushgateway --log.level=error &) && " +
 									"kafka-consumer-perf-test --topic " + kafkaConsumerPerfTestSync.Spec.Topic.Name +
 									" --bootstrap-server " + kafkaConsumerPerfTestSync.Spec.BootstrapServers +
 									" --messages " + strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.MessagesCount)) +
 									" --timeout " + strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.Timeout)) +
 									" group.id=" + kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.GroupID +
-									" --consumer.config /mnt/kafka.properties && " +
+									" --consumer.config /mnt/kafka.properties | tee metrics.txt && " +
+									"./generate_prometheus_metrics.sh metrics.txt consumer | curl --data-binary @- http://localhost:9091/metrics/job/kafka_consumer_perf_test && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{

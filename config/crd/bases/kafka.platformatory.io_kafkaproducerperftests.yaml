@@ -46,7 +46,7 @@ spec:
                 format: int32
                 type: integer
               image:
-                default: platformatorylabs/kafka-performance-suite:1.0.0
+                default: platformatorylabs/kafka-performance-suite:1.0.1
                 type: string
               metricsCollector:
                 properties:

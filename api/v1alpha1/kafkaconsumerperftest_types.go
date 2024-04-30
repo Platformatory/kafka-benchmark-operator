@@ -46,7 +46,7 @@ type KafkaConsumerPerfTestSpec struct {
 
 	Count int32 `json:"count"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="platformatorylabs/kafka-performance-suite:1.0.0"
+	// +kubebuilder:default:="platformatorylabs/kafka-performance-suite:1.0.1"
 	Image            string `json:"image,omitempty"`
 	BootstrapServers string `json:"bootstrapServers"`
 	// +kubebuilder:validation:Optional
