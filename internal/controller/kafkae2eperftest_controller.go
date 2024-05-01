@@ -203,6 +203,10 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	sleep_time = sleep_time * 3
 
+	pod_labels := map[string]string{
+		"job": "perf-test",
+	}
+
 	e2e_job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kafkaE2EPerfTestSync.Name + "-e2e-perf",
@@ -212,6 +216,9 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			Completions: &kafkaE2EPerfTestSync.Spec.Count,
 			Parallelism: &kafkaE2EPerfTestSync.Spec.Count,
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: pod_labels,
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -290,6 +297,37 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			},
 			BackoffLimit: utils.GetIntPointer(4),
 		},
+	}
+
+	if len(kafkaE2EPerfTestSync.Spec.TopologySpreadConstraints) > 0 {
+		var topologySpreadConstraints []corev1.TopologySpreadConstraint
+		for _, tsc := range kafkaE2EPerfTestSync.Spec.TopologySpreadConstraints {
+			whenUnsatisfiable := corev1.DoNotSchedule
+			if tsc.WhenUnsatisfiable == "DoNotSchedule" {
+				whenUnsatisfiable = corev1.ScheduleAnyway
+			}
+			nodeAffinityPolicy := corev1.NodeInclusionPolicyIgnore
+			nodeTaintsPolicy := corev1.NodeInclusionPolicyIgnore
+			if tsc.NodeAffinityPolicy == "Honor" {
+				nodeAffinityPolicy = corev1.NodeInclusionPolicyHonor
+			}
+			if tsc.NodeTaintsPolicy == "Honor" {
+				nodeTaintsPolicy = corev1.NodeInclusionPolicyHonor
+			}
+			topologySpreadConstraint := corev1.TopologySpreadConstraint{
+				MaxSkew:           tsc.MaxSkew,
+				TopologyKey:       tsc.TopologyKey,
+				WhenUnsatisfiable: whenUnsatisfiable,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: tsc.LabelSelector.MatchLabels,
+				},
+				NodeAffinityPolicy: &nodeAffinityPolicy,
+				NodeTaintsPolicy:   &nodeTaintsPolicy,
+			}
+			topologySpreadConstraints = append(topologySpreadConstraints, topologySpreadConstraint)
+		}
+
+		e2e_job.Spec.Template.Spec.TopologySpreadConstraints = topologySpreadConstraints
 	}
 
 	if kafkaE2EPerfTestSync.Spec.Topic.AutoCreate == true {

@@ -71,7 +71,7 @@ type RemoteWrite struct {
 	// +kubebuilder:validation:Optional
 	Bearer_Token string `json:"bearer_token,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={send: true, send_interval: "1m", max_samples_per_send: 500}
+	// +kubebuilder:default:={send: true, send_interval: "15s", max_samples_per_send: 500}
 	Metadata_config RemoteWriteMetadataConfig `json:"metadata_config"`
 }
 
@@ -87,13 +87,26 @@ type MetricsCollector struct {
 	Config            PrometheusConfig `json:"config"`
 }
 
+type LabelSelector struct {
+	MatchLabels map[string]string `json:"matchLabels"`
+}
+
 type TopologySpreadConstraint struct {
 	TopologyKey string `json:"topologyKey"`
 	// +kubebuilder:validation:Optional
-	MaxSkew int `json:"maxSkew"`
+	MaxSkew int32 `json:"maxSkew"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=DoNotSchedule;ScheduleAnyway
-	WhenUnsatisfiable string `json:"whenUnsatisfiable"`
+	WhenUnsatisfiable string        `json:"whenUnsatisfiable"`
+	LabelSelector     LabelSelector `json:"labelSelector"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="Ignore"
+	// +kubebuilder:validation:Enum=Honor;Ignore
+	NodeAffinityPolicy string `json:"nodeAffinityPolicy"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="Ignore"
+	// +kubebuilder:validation:Enum=Honor;Ignore
+	NodeTaintsPolicy string `json:"nodeTaintsPolicy"`
 }
 
 // KafkaProducerPerfTestSpec defines the desired state of KafkaProducerPerfTest

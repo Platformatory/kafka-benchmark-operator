@@ -203,6 +203,10 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 
 	sleep_time = sleep_time * 3
 
+	pod_labels := map[string]string{
+		"job": "perf-test",
+	}
+
 	producer_job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kafkaProducerPerfTestSync.Name + "-producer-perf",
@@ -212,6 +216,9 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 			Completions: &kafkaProducerPerfTestSync.Spec.Count,
 			Parallelism: &kafkaProducerPerfTestSync.Spec.Count,
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: pod_labels,
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -284,6 +291,37 @@ func (r *KafkaProducerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 			},
 			BackoffLimit: utils.GetIntPointer(4),
 		},
+	}
+
+	if len(kafkaProducerPerfTestSync.Spec.TopologySpreadConstraints) > 0 {
+		var topologySpreadConstraints []corev1.TopologySpreadConstraint
+		for _, tsc := range kafkaProducerPerfTestSync.Spec.TopologySpreadConstraints {
+			whenUnsatisfiable := corev1.DoNotSchedule
+			if tsc.WhenUnsatisfiable == "DoNotSchedule" {
+				whenUnsatisfiable = corev1.ScheduleAnyway
+			}
+			nodeAffinityPolicy := corev1.NodeInclusionPolicyIgnore
+			nodeTaintsPolicy := corev1.NodeInclusionPolicyIgnore
+			if tsc.NodeAffinityPolicy == "Honor" {
+				nodeAffinityPolicy = corev1.NodeInclusionPolicyHonor
+			}
+			if tsc.NodeTaintsPolicy == "Honor" {
+				nodeTaintsPolicy = corev1.NodeInclusionPolicyHonor
+			}
+			topologySpreadConstraint := corev1.TopologySpreadConstraint{
+				MaxSkew:           tsc.MaxSkew,
+				TopologyKey:       tsc.TopologyKey,
+				WhenUnsatisfiable: whenUnsatisfiable,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: tsc.LabelSelector.MatchLabels,
+				},
+				NodeAffinityPolicy: &nodeAffinityPolicy,
+				NodeTaintsPolicy:   &nodeTaintsPolicy,
+			}
+			topologySpreadConstraints = append(topologySpreadConstraints, topologySpreadConstraint)
+		}
+
+		producer_job.Spec.Template.Spec.TopologySpreadConstraints = topologySpreadConstraints
 	}
 
 	if kafkaProducerPerfTestSync.Spec.Topic.AutoCreate == true {

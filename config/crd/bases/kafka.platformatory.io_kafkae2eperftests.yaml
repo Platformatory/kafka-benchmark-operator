@@ -85,7 +85,7 @@ spec:
                               default:
                                 max_samples_per_send: 500
                                 send: true
-                                send_interval: 1m
+                                send_interval: 15s
                               properties:
                                 max_samples_per_send:
                                   type: integer
@@ -138,8 +138,30 @@ spec:
               topologySpreadConstraints:
                 items:
                   properties:
+                    labelSelector:
+                      properties:
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                      required:
+                      - matchLabels
+                      type: object
                     maxSkew:
+                      format: int32
                       type: integer
+                    nodeAffinityPolicy:
+                      default: Ignore
+                      enum:
+                      - Honor
+                      - Ignore
+                      type: string
+                    nodeTaintsPolicy:
+                      default: Ignore
+                      enum:
+                      - Honor
+                      - Ignore
+                      type: string
                     topologyKey:
                       type: string
                     whenUnsatisfiable:
@@ -148,6 +170,7 @@ spec:
                       - ScheduleAnyway
                       type: string
                   required:
+                  - labelSelector
                   - topologyKey
                   type: object
                 type: array
