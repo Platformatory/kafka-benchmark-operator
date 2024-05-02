@@ -111,9 +111,13 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	prometheusConfig := map[string]interface{}{
-		"global": map[string]string{
+		"global": map[string]interface{}{
 			"scrape_interval":     "5s",
 			"evaluation_interval": "5s",
+			"external_labels": map[string]interface{}{
+				"pod_ip":   "$POD_IP",
+				"pod_name": "$POD_NAME",
+			},
 		},
 		"scrape_configs": []map[string]interface{}{
 			{
@@ -140,10 +144,18 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 				},
 				"relabel_configs": []map[string]interface{}{
 					{
-						"source_labels": []string{"__address__"},
+						"source_labels": []string{"__name__"},
 						"target_label":  "hostname",
-						"regex":         "([^:]+)(:[0-9]+)?",
-						"replacement":   "${1}",
+						"regex":         "(.*)",
+						"replacement":   "$POD_IP",
+						"action":        "replace",
+					},
+					{
+						"source_labels": []string{"__name__"},
+						"target_label":  "instance",
+						"regex":         "(.*)",
+						"replacement":   "$POD_NAME",
+						"action":        "replace",
 					},
 				},
 			},
@@ -230,7 +242,7 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 							Command: []string{
 								"/bin/sh",
 								"-c",
-								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
+								"(./prometheus --enable-feature=agent --enable-feature=expand-external-labels --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
 									"(./pushgateway --log.level=error &) && " +
 									"kafka-consumer-perf-test --topic " + kafkaConsumerPerfTestSync.Spec.Topic.Name +
 									" --bootstrap-server " + kafkaConsumerPerfTestSync.Spec.BootstrapServers +
@@ -238,7 +250,7 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 									" --timeout " + strconv.Itoa(int(kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.Timeout)) +
 									" group.id=" + kafkaConsumerPerfTestSync.Spec.ConsumerPerfParams.GroupID +
 									" --consumer.config /mnt/kafka.properties | tee metrics.txt && " +
-									"./generate_prometheus_metrics.sh metrics.txt consumer | curl --data-binary @- http://localhost:9091/metrics/job/kafka_consumer_perf_test && " +
+									"./generate_prometheus_metrics.sh metrics.txt consumer | curl --data-binary @- http://localhost:9091/metrics/job/$POD_NAME && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{
@@ -307,7 +319,7 @@ func (r *KafkaConsumerPerfTestReconciler) Reconcile(ctx context.Context, req ctr
 		var topologySpreadConstraints []corev1.TopologySpreadConstraint
 		for _, tsc := range kafkaConsumerPerfTestSync.Spec.TopologySpreadConstraints {
 			whenUnsatisfiable := corev1.DoNotSchedule
-			if tsc.WhenUnsatisfiable == "DoNotSchedule" {
+			if tsc.WhenUnsatisfiable == "ScheduleAnyway" {
 				whenUnsatisfiable = corev1.ScheduleAnyway
 			}
 			nodeAffinityPolicy := corev1.NodeInclusionPolicyIgnore

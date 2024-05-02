@@ -227,14 +227,14 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 							Command: []string{
 								"/bin/sh",
 								"-c",
-								"(./prometheus --enable-feature=agent --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
+								"(./prometheus --enable-feature=agent --enable-feature=expand-external-labels --config.file=\"/prom/prometheus.yml\" --log.level=error &) && " +
 									"(./pushgateway --log.level=error &) && " +
 									"kafka-run-class kafka.tools.EndToEndLatency " +
 									kafkaE2EPerfTestSync.Spec.BootstrapServers + " " + kafkaE2EPerfTestSync.Spec.Topic.Name + " " +
 									strconv.Itoa(int(kafkaE2EPerfTestSync.Spec.E2EPerfParams.RecordsCount)) + " " +
 									kafkaE2EPerfTestSync.Spec.E2EPerfParams.Acks + " " +
 									strconv.Itoa(int(kafkaE2EPerfTestSync.Spec.E2EPerfParams.RecordSizeBytes)) + " /mnt/kafka.properties | tee metrics.txt && " +
-									"./generate_prometheus_metrics.sh metrics.txt e2e | curl --data-binary @- http://localhost:9091/metrics/job/kafka_e2e_latency_test && " +
+									"./generate_prometheus_metrics.sh metrics.txt e2e | curl --data-binary @- http://localhost:9091/metrics/job/$POD_NAME  && " +
 									fmt.Sprintf(`sleep %d`, sleep_time),
 							},
 							Env: []corev1.EnvVar{
@@ -303,7 +303,7 @@ func (r *KafkaE2EPerfTestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		var topologySpreadConstraints []corev1.TopologySpreadConstraint
 		for _, tsc := range kafkaE2EPerfTestSync.Spec.TopologySpreadConstraints {
 			whenUnsatisfiable := corev1.DoNotSchedule
-			if tsc.WhenUnsatisfiable == "DoNotSchedule" {
+			if tsc.WhenUnsatisfiable == "ScheduleAnyway" {
 				whenUnsatisfiable = corev1.ScheduleAnyway
 			}
 			nodeAffinityPolicy := corev1.NodeInclusionPolicyIgnore

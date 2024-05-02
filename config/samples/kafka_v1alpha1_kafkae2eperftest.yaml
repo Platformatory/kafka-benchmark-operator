@@ -5,23 +5,21 @@ metadata:
     app.kubernetes.io/name: kafka-benchmark-operator
     app.kubernetes.io/managed-by: kustomize
   name: kafkae2eperftest-sample
-  namespace: kafka-benchmark-operator-system
+  namespace: demo
 spec:
-  count: 4
+  count: 1
   image: platformatorylabs/kafka-performance-suite:1.0.1
   bootstrapServers: kafka.confluent.svc.cluster.local:9092
   clientConfig:
-    # security.protocol: "SASL_SSL"
-    # sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='perf' password='perf-password';"
-    # sasl.mechanism: "PLAIN"
+    fetch.min.bytes: "5120"
   # clientConfigSecretRef:
   #   name: kafka-perf-e2e-config
   e2ePerfParams:
-    recordsCount: 5000
+    recordsCount: 1000
     recordSizeBytes: 5120
     acks: "all"
   topic:
-    name: e2e-perf-test
+    name: e2e-perf-test-demo
     autoCreate: true
     replicas: 1
     partitions: 1
@@ -33,7 +31,7 @@ spec:
       remoteWrite:
       - url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
   topologySpreadConstraints:
-    - topologyKey: zone
+    - topologyKey: topology.kubernetes.io/zone
       maxSkew: 1
       whenUnsatisfiable: DoNotSchedule
       labelSelector:

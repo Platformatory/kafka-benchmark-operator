@@ -5,19 +5,18 @@ metadata:
     app.kubernetes.io/name: kafka-benchmark-operator
     app.kubernetes.io/managed-by: kustomize
   name: kafkaconsumerperftest-sample
-  namespace: kafka-benchmark-operator-system
+  namespace: demo
 spec:
   count: 4
   # image: platformatorylabs/kafka-performance-suite:1.0.1
   bootstrapServers: kafka.confluent.svc.cluster.local:9092
   consumerConfig:
     security.protocol: "PLAINTEXT"
-    # sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='perf' password='perf-password';"
-    # sasl.mechanism: "PLAIN"
+    max.poll.records: "1000"
   # consumerConfigSecretRef:
   #   name: kafka-perf-consumer-config
   consumerPerfParams:
-    messagesCount: 10000
+    messagesCount: 100000
     timeout: 100000
   topic:
     name: perf-test
@@ -33,7 +32,7 @@ spec:
       remoteWrite:
       - url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
   topologySpreadConstraints:
-    - topologyKey: zone
+    - topologyKey: topology.kubernetes.io/zone
       maxSkew: 1
       whenUnsatisfiable: DoNotSchedule
       labelSelector:

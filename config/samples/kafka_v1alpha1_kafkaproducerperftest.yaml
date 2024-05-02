@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: kafka-benchmark-operator
     app.kubernetes.io/managed-by: kustomize
   name: kafkaproducerperftest-sample
-  namespace: kafka-benchmark-operator-system
+  namespace: demo
 spec:
   count: 4
   # image: platformatorylabs/kafka-performance-suite:1.0.1
@@ -21,7 +21,7 @@ spec:
   #   name: kafka-perf-producer-config
   producerPerfParams:
     recordsCount: 100000
-    recordSizeBytes: 512000
+    recordSizeBytes: 51200
     throughput: -1
     acks: -1
   topic:
@@ -38,7 +38,7 @@ spec:
       remoteWrite:
       - url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
   topologySpreadConstraints:
-    - topologyKey: zone
+    - topologyKey: topology.kubernetes.io/zone
       maxSkew: 1
       whenUnsatisfiable: DoNotSchedule
       labelSelector:
