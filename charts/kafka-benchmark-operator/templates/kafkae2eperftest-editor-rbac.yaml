@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kafka-benchmark-operator.fullname" . }}-kafkae2eperftest-editor-role
+  labels:
+  {{- include "kafka-benchmark-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkae2eperftests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkae2eperftests/status
+  verbs:
+  - get

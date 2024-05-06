@@ -1,0 +1,136 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kafka-benchmark-operator.fullname" . }}-manager-role
+  labels:
+  {{- include "kafka-benchmark-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaconsumerperftests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaconsumerperftests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaconsumerperftests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkae2eperftests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkae2eperftests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkae2eperftests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaproducerperftests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaproducerperftests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kafka.platformatory.io
+  resources:
+  - kafkaproducerperftests/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kafka-benchmark-operator.fullname" . }}-manager-rolebinding
+  labels:
+  {{- include "kafka-benchmark-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "kafka-benchmark-operator.fullname" . }}-manager-role'
+subjects:
+- kind: ServiceAccount
+  name: '{{ include "kafka-benchmark-operator.fullname" . }}-controller-manager'
+  namespace: '{{ .Release.Namespace }}'
