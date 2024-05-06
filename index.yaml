@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  kafka-benchmark-operator:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2024-05-06T12:45:08.649719522Z"
+    description: A Helm chart for Kubernetes
+    digest: bd6006be7537bc14d602c9d6e0029a9c4dac066a9c92818edb62e5896c8da1c8
+    name: kafka-benchmark-operator
+    type: application
+    urls:
+    - https://github.com/Platformatory/kafka-benchmark-operator/releases/download/kafka-benchmark-operator-0.1.0/kafka-benchmark-operator-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-05-06T12:45:08.649725153Z"
